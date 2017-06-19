@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="AutoViewPager">
+        <attr name="switch_time" format="integer"/>
+        <attr name="dot_mode" format="integer">
+            <flag name="left" value="1"/>
+            <flag name="center" value="2"/>
+            <flag name="right" value="3"/>
+        </attr>
+        <attr name="open_switch" format="boolean"/>
+    </declare-styleable>
+</resources>
