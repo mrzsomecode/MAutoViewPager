@@ -9,6 +9,7 @@ import android.os.Message;
 import android.support.v4.view.PagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
@@ -52,6 +53,10 @@ public class AutoViewPager extends FrameLayout {
     private MyPagerAdapter adapter;
     private Timer timer;
     private TimerTask timerTask;
+    private OnClickListener dotClickListener;
+
+    private OnItemClickListener listener;
+
     private Handler handler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
@@ -60,13 +65,11 @@ public class AutoViewPager extends FrameLayout {
         }
     };
 
-    private OnClickListener dotClickListener;
-
-    private OnItemClickListener listener;
-
     public String[] getImageUrls() {
         return imageUrls;
     }
+
+    float upTouchX = 0;
 
     public void setImageUrls(String[] imageUrls) {
         this.imageUrls = imageUrls;
@@ -109,9 +112,6 @@ public class AutoViewPager extends FrameLayout {
         this.context = context;
         init(attrs);
     }
-
-    float x = 0;
-    private static final String TAG = "AutoViewPager";
 
     /**
      * 关闭轮播
@@ -163,8 +163,9 @@ public class AutoViewPager extends FrameLayout {
 
     @Override
     public boolean dispatchTouchEvent(MotionEvent ev) {
-        float scorllX = ev.getX() - x;
-        x = ev.getX();
+        float scorllX = ev.getX() - upTouchX;
+        upTouchX = ev.getX();
+        Log.e("dispatchTouchEvent", "dispatchTouchEvent: " + ev.getAction());
         switch (ev.getAction()) {
             case MotionEvent.ACTION_MOVE:
                 //左右移动
@@ -177,6 +178,7 @@ public class AutoViewPager extends FrameLayout {
                 }
                 break;
             case MotionEvent.ACTION_UP:
+            case MotionEvent.ACTION_CANCEL:
                 if (openSwitch && timerTask == null)
                     startSwitch();
                 break;
@@ -290,6 +292,7 @@ public class AutoViewPager extends FrameLayout {
             dotLayout.addView(dotView, params);
             dotViewsList[i] = dotView;
         }
+
         adapter.notifyDataSetChanged();
         viewPager.setCurrentItem(currentItem);
         if (openSwitch)
@@ -335,7 +338,6 @@ public class AutoViewPager extends FrameLayout {
 
         @Override
         public int getCount() {
-            // TODO Auto-generated method stub
             return imageViewsList != null ? imageViewsList.length : 0;
         }
 
