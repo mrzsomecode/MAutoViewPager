@@ -302,13 +302,11 @@ public class AutoViewPager extends FrameLayout {
             view.setScaleType(ImageView.ScaleType.CENTER_CROP);
             imageViewsList[i + 1] = view;
             ImageView dotView = new ImageView(context);
-            dotView.setBackgroundResource(dotDrawable);
+            dotView.setImageResource(dotDrawable);
+            dotView.setPadding(8, 0, 8, 0);
             dotView.setTag(i + 1);
-            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
-            params.leftMargin = 4;
-            params.rightMargin = 4;
             dotView.setOnClickListener(dotClickListener);
-            dotLayout.addView(dotView, params);
+            dotLayout.addView(dotView);
             dotViewsList[i] = dotView;
         }
 
