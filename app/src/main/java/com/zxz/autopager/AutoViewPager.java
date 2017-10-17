@@ -9,9 +9,7 @@ import android.os.Message;
 import android.support.v4.view.PagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.Gravity;
-import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
@@ -64,6 +62,7 @@ public class AutoViewPager extends FrameLayout {
             nextPage();
         }
     };
+    private int dotDrawable;
 
     public String[] getImageUrls() {
         return imageUrls;
@@ -117,6 +116,8 @@ public class AutoViewPager extends FrameLayout {
      * 关闭轮播
      */
     public void closeSwitch() {
+        if (!openSwitch)
+            return;
         if (timer != null) {
             timer.cancel();
             timer = null;
@@ -131,6 +132,8 @@ public class AutoViewPager extends FrameLayout {
      * 开启轮播
      */
     public void startSwitch() {
+        if (!openSwitch)
+            return;
         if (timer == null) {
             timer = new Timer();
         }
@@ -155,6 +158,7 @@ public class AutoViewPager extends FrameLayout {
         switchTime = a.getInteger(R.styleable.AutoViewPager_switch_time, 3000);
         openSwitch = a.getBoolean(R.styleable.AutoViewPager_open_switch, true);
         dotMode = a.getInteger(R.styleable.AutoViewPager_dot_mode, 2);
+        dotDrawable = a.getResourceId(R.styleable.AutoViewPager_dot_drawable, R.drawable.dot_res);
         a.recycle();
         initView();
         initListener();
@@ -165,7 +169,6 @@ public class AutoViewPager extends FrameLayout {
     public boolean dispatchTouchEvent(MotionEvent ev) {
         float scorllX = ev.getX() - upTouchX;
         upTouchX = ev.getX();
-        Log.e("dispatchTouchEvent", "dispatchTouchEvent: " + ev.getAction());
         switch (ev.getAction()) {
             case MotionEvent.ACTION_MOVE:
                 //左右移动
@@ -186,9 +189,21 @@ public class AutoViewPager extends FrameLayout {
         return super.dispatchTouchEvent(ev);
     }
 
+    @Override
+    protected void onAttachedToWindow() {
+        super.onAttachedToWindow();
+        requestFocus();
+        startSwitch();
+    }
+
+    @Override
+    protected void onDetachedFromWindow() {
+        super.onDetachedFromWindow();
+        closeSwitch();
+    }
+
     private void initView() {
-        LayoutInflater.from(context).inflate(R.layout.auto_viewpager, this, true);
-        dotLayout = (LinearLayout) findViewById(R.id.dotLayout);
+        dotLayout = new LinearLayout(getContext());
         dotLayout.removeAllViews();
         switch (dotMode) {
             case 1:
@@ -201,7 +216,7 @@ public class AutoViewPager extends FrameLayout {
                 dotLayout.setGravity(Gravity.RIGHT);
                 break;
         }
-        viewPager = (ViewPager) findViewById(R.id.auto_viewpager);
+        viewPager = new ViewPager(getContext());
         viewPager.setOffscreenPageLimit(3);
         adapter = new MyPagerAdapter();
         viewPager.setAdapter(adapter);
@@ -218,9 +233,9 @@ public class AutoViewPager extends FrameLayout {
                     return;
                 for (int i = 0; i < dotViewsList.length; i++) {
                     if ((position == imageViewsList.length - 1 && i == 0) || i == position - 1) {
-                        dotViewsList[i].setBackgroundResource(R.drawable.dot_select);
+                        dotViewsList[i].setSelected(true);
                     } else {
-                        dotViewsList[i].setBackgroundResource(R.drawable.dot_no_select);
+                        dotViewsList[i].setSelected(false);
                     }
                 }
             }
@@ -236,6 +251,11 @@ public class AutoViewPager extends FrameLayout {
                 }
             }
         });
+        addView(viewPager, generateDefaultLayoutParams());
+        FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        params.gravity = Gravity.BOTTOM;
+        dotLayout.setPadding(16, 16, 16, 16);
+        addView(dotLayout, params);
     }
 
     //圆点点击切换pager
@@ -243,11 +263,9 @@ public class AutoViewPager extends FrameLayout {
         dotClickListener = new OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (openSwitch)
-                    closeSwitch();
+                closeSwitch();
                 viewPager.setCurrentItem((Integer) v.getTag());
-                if (openSwitch)
-                    startSwitch();
+                startSwitch();
             }
         };
     }
@@ -284,6 +302,7 @@ public class AutoViewPager extends FrameLayout {
             view.setScaleType(ImageView.ScaleType.CENTER_CROP);
             imageViewsList[i + 1] = view;
             ImageView dotView = new ImageView(context);
+            dotView.setBackgroundResource(dotDrawable);
             dotView.setTag(i + 1);
             LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
             params.leftMargin = 4;
@@ -295,8 +314,6 @@ public class AutoViewPager extends FrameLayout {
 
         adapter.notifyDataSetChanged();
         viewPager.setCurrentItem(currentItem);
-        if (openSwitch)
-            startSwitch();
     }
 
     /**
