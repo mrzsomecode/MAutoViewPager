@@ -6,6 +6,7 @@ import android.content.res.TypedArray;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Message;
+import android.support.annotation.NonNull;
 import android.support.v4.view.PagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.util.AttributeSet;
@@ -18,7 +19,6 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 
 import com.bumptech.glide.Glide;
-import com.bumptech.glide.load.engine.DiskCacheStrategy;
 
 import java.util.Timer;
 import java.util.TimerTask;
@@ -115,13 +115,9 @@ public class AutoViewPager extends FrameLayout {
     /**
      * 关闭轮播
      */
-    public void closeSwitch() {
+    public synchronized void closeSwitch() {
         if (!openSwitch)
             return;
-        if (timer != null) {
-            timer.cancel();
-            timer = null;
-        }
         if (timerTask != null) {
             timerTask.cancel();
             timerTask = null;
@@ -131,7 +127,7 @@ public class AutoViewPager extends FrameLayout {
     /**
      * 开启轮播
      */
-    public void startSwitch() {
+    public synchronized void startSwitch() {
         if (!openSwitch)
             return;
         if (timer == null) {
@@ -231,8 +227,12 @@ public class AutoViewPager extends FrameLayout {
                 currentItem = position;
                 if (dotViewsList == null || imageViewsList == null)
                     return;
+                //3 1 2 3 1 ,position 最后一个 就是第一个
+                //position 为 0 就是最后一个
                 for (int i = 0; i < dotViewsList.length; i++) {
-                    if ((position == imageViewsList.length - 1 && i == 0) || i == position - 1) {
+                    if ((position == imageViewsList.length - 1 && i == 0) //第一个
+                            || (position == 0 && i == dotViewsList.length - 1) //最后一个
+                            || i == position - 1) {
                         dotViewsList[i].setSelected(true);
                     } else {
                         dotViewsList[i].setSelected(false);
@@ -284,34 +284,46 @@ public class AutoViewPager extends FrameLayout {
         if (imageUrls == null || imageUrls.length == 0)
             return;
         int length = imageUrls.length;
-        if (imageViewsList == null)
+        if (imageViewsList == null || imageViewsList.length != length + 2) {
             imageViewsList = new ImageView[length + 2];
-        if (dotViewsList == null)
-            dotViewsList = new ImageView[length];
-        // 热点个数与图片特殊相等
-        // 3 1 2 3 1 无限循环轮播
-        ImageView first = new ImageView(context);
-        first.setScaleType(ImageView.ScaleType.CENTER_CROP);
-        ImageView last = new ImageView(context);
-        last.setScaleType(ImageView.ScaleType.CENTER_CROP);
-        imageViewsList[length + 1] = last;
-        imageViewsList[0] = first;
-
-        for (int i = 0; i < length; i++) {
-            ImageView view = new ImageView(context);
-            view.setScaleType(ImageView.ScaleType.CENTER_CROP);
-            imageViewsList[i + 1] = view;
-            ImageView dotView = new ImageView(context);
-            dotView.setImageResource(dotDrawable);
-            dotView.setPadding(8, 0, 8, 0);
-            dotView.setTag(i + 1);
-            dotView.setOnClickListener(dotClickListener);
-            dotLayout.addView(dotView);
-            dotViewsList[i] = dotView;
+            // 热点个数与图片特殊相等
+            // 3 1 2 3 1 无限循环轮播
+            ImageView first = createImageView();
+            ImageView last = createImageView();
+            imageViewsList[length + 1] = last;
+            imageViewsList[0] = first;
         }
-
+        if (dotViewsList == null || dotViewsList.length != length) {
+            dotViewsList = new ImageView[length];
+            dotLayout.removeAllViews();
+        }
+        for (int i = 0; i < length; i++) {
+            ImageView view = imageViewsList[i + 1];
+            if (view == null) {
+                view = createImageView();
+                imageViewsList[i + 1] = view;
+            }
+            ImageView dotView = dotViewsList[i];
+            if (dotView == null) {
+                dotView = new ImageView(context);
+                dotView.setImageResource(dotDrawable);
+                dotView.setPadding(8, 0, 8, 0);
+                dotView.setTag(i + 1);
+                dotView.setOnClickListener(dotClickListener);
+                dotLayout.addView(dotView);
+                dotViewsList[i] = dotView;
+            }
+            dotView.setSelected(currentItem - 1 == i);
+        }
         adapter.notifyDataSetChanged();
         viewPager.setCurrentItem(currentItem);
+    }
+
+    @NonNull
+    private ImageView createImageView() {
+        ImageView imageView = new ImageView(context);
+        imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        return imageView;
     }
 
     /**
@@ -323,28 +335,25 @@ public class AutoViewPager extends FrameLayout {
             container.removeView(imageViewsList[position]);
         }
 
+
         @Override
         public Object instantiateItem(ViewGroup container, final int position) {
             ImageView imageView = imageViewsList[position];
-            String url;
+            final int truePosiiton;
             if (position == 0) {
-                url = imageUrls[imageUrls.length - 1];
+                truePosiiton = imageUrls.length - 1;
             } else if (position == imageViewsList.length - 1) {
-                url = imageUrls[0];
+                truePosiiton = 0;
             } else {
-                url = imageUrls[position - 1];
+                truePosiiton = position - 1;
             }
-            Glide.with(context)
-                    .load(url)
-                    .crossFade()
-                    .diskCacheStrategy(DiskCacheStrategy.ALL)
-                    .centerCrop()
-                    .into(imageView);
+            String url = imageUrls[truePosiiton];
+            Glide.with(context).load(url).into(imageView);
             imageView.setOnClickListener(new OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     if (AutoViewPager.this.listener != null)
-                        AutoViewPager.this.listener.onItemClick(v, position);
+                        AutoViewPager.this.listener.onItemClick(v, truePosiiton);
                 }
             });
             container.addView(imageView);
