@@ -19,7 +19,9 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 
 import com.bumptech.glide.Glide;
+import com.zxz.autopager.interfaces.IBanner;
 
+import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -28,7 +30,7 @@ import java.util.TimerTask;
  * Created by Administrator on 2016/3/31.
  */
 public class AutoViewPager extends FrameLayout {
-    private String[] imageUrls;
+    private List<? extends IBanner> imageUrls;
     /**
      * 切换延时（ms）
      */
@@ -64,13 +66,13 @@ public class AutoViewPager extends FrameLayout {
     };
     private int dotDrawable;
 
-    public String[] getImageUrls() {
+    public List<? extends IBanner>  getImageUrls() {
         return imageUrls;
     }
 
     float upTouchX = 0;
 
-    public void setImageUrls(String[] imageUrls) {
+    public void setImageUrls(List<? extends IBanner>  imageUrls) {
         this.imageUrls = imageUrls;
         changePages();
     }
@@ -281,9 +283,9 @@ public class AutoViewPager extends FrameLayout {
      * images and dotView
      */
     private void changePages() {
-        if (imageUrls == null || imageUrls.length == 0)
+        if (imageUrls == null || imageUrls.size() == 0)
             return;
-        int length = imageUrls.length;
+        int length = imageUrls.size();
         if (imageViewsList == null || imageViewsList.length != length + 2) {
             imageViewsList = new ImageView[length + 2];
             // 热点个数与图片特殊相等
@@ -341,13 +343,13 @@ public class AutoViewPager extends FrameLayout {
             ImageView imageView = imageViewsList[position];
             final int truePosiiton;
             if (position == 0) {
-                truePosiiton = imageUrls.length - 1;
+                truePosiiton = imageUrls.size() - 1;
             } else if (position == imageViewsList.length - 1) {
                 truePosiiton = 0;
             } else {
                 truePosiiton = position - 1;
             }
-            String url = imageUrls[truePosiiton];
+            String url = imageUrls.get(truePosiiton).getUrl();
             Glide.with(context).load(url).into(imageView);
             imageView.setOnClickListener(new OnClickListener() {
                 @Override
