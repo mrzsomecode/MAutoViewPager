@@ -28,9 +28,10 @@ public class MainActivity extends Activity {
         mPager.setImageUrls(imgs);
         mPager.setOnItemClickListener(new AutoViewPager.OnItemClickListener() {
             @Override
-            public void onItemClick(View view, int position) {
+            public void onPagerItemClick(View view, int position) {
                 Toast.makeText(getApplicationContext(), "点击了" + position, Toast.LENGTH_SHORT).show();
             }
+
         });
     }
 

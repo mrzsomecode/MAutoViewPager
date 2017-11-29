@@ -29,8 +29,8 @@ import java.util.TimerTask;
  * 无限循环轮播图
  * Created by Administrator on 2016/3/31.
  */
-public class AutoViewPager extends FrameLayout {
-    private List<? extends IBanner> imageUrls;
+public class AutoViewPager<T extends IBanner> extends FrameLayout implements ViewPager.OnPageChangeListener {
+    private List<T> imageUrls;
     /**
      * 切换延时（ms）
      */
@@ -66,13 +66,13 @@ public class AutoViewPager extends FrameLayout {
     };
     private int dotDrawable;
 
-    public List<? extends IBanner>  getImageUrls() {
+    public List<T> getImageUrls() {
         return imageUrls;
     }
 
     float upTouchX = 0;
 
-    public void setImageUrls(List<? extends IBanner>  imageUrls) {
+    public void setImageUrls(List<T> imageUrls) {
         this.imageUrls = imageUrls;
         changePages();
     }
@@ -218,41 +218,7 @@ public class AutoViewPager extends FrameLayout {
         viewPager.setOffscreenPageLimit(3);
         adapter = new MyPagerAdapter();
         viewPager.setAdapter(adapter);
-        viewPager.addOnPageChangeListener(new ViewPager.OnPageChangeListener() {
-            @Override
-            public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
-
-            }
-
-            @Override
-            public void onPageSelected(int position) {
-                currentItem = position;
-                if (dotViewsList == null || imageViewsList == null)
-                    return;
-                //3 1 2 3 1 ,position 最后一个 就是第一个
-                //position 为 0 就是最后一个
-                for (int i = 0; i < dotViewsList.length; i++) {
-                    if ((position == imageViewsList.length - 1 && i == 0) //第一个
-                            || (position == 0 && i == dotViewsList.length - 1) //最后一个
-                            || i == position - 1) {
-                        dotViewsList[i].setSelected(true);
-                    } else {
-                        dotViewsList[i].setSelected(false);
-                    }
-                }
-            }
-
-            @Override
-            public void onPageScrollStateChanged(int state) {
-                if (state == ViewPager.SCROLL_STATE_IDLE) {
-                    if (currentItem == viewPager.getAdapter().getCount() - 1) {
-                        viewPager.setCurrentItem(1, false);
-                    } else if (currentItem == 0) {
-                        viewPager.setCurrentItem(viewPager.getAdapter().getCount() - 2, false);
-                    }
-                }
-            }
-        });
+        viewPager.addOnPageChangeListener(this);
         addView(viewPager, generateDefaultLayoutParams());
         FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         params.gravity = Gravity.BOTTOM;
@@ -276,7 +242,19 @@ public class AutoViewPager extends FrameLayout {
      * 下一页
      */
     private void nextPage() {
-        viewPager.setCurrentItem(currentItem + 1);
+        //如果View onDetachedFromWindow 了
+        //onPageScrollStateChanged(ViewPager.SCROLL_STATE_IDLE) 不会调用(切换滑动停止时的回调)
+        //所以这里也要判断currentItem
+        if (currentItem == viewPager.getAdapter().getCount() - 1) {
+            currentItem = 1;
+            viewPager.setCurrentItem(1, false);
+            viewPager.setCurrentItem(2, true);
+        } else if (currentItem == 0) {
+            viewPager.setCurrentItem(viewPager.getAdapter().getCount() - 2, false);
+            viewPager.setCurrentItem(viewPager.getAdapter().getCount() - 1, true);
+        } else {
+            viewPager.setCurrentItem(currentItem + 1, true);
+        }
     }
 
     /**
@@ -324,8 +302,42 @@ public class AutoViewPager extends FrameLayout {
     @NonNull
     private ImageView createImageView() {
         ImageView imageView = new ImageView(context);
-        imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        imageView.setScaleType(ImageView.ScaleType.FIT_XY);
         return imageView;
+    }
+
+    @Override
+    public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
+
+    }
+
+    @Override
+    public void onPageSelected(int position) {
+        if (dotViewsList == null || imageViewsList == null)
+            return;
+        //3 1 2 3 1 ,position 最后一个 就是第一个
+        //position 为 0 就是最后一个
+        currentItem = position;
+        for (int i = 0; i < dotViewsList.length; i++) {
+            if ((position == imageViewsList.length - 1 && i == 0) //第一个
+                    || (position == 0 && i == dotViewsList.length - 1) //最后一个
+                    || i == position - 1) {
+                dotViewsList[i].setSelected(true);
+            } else {
+                dotViewsList[i].setSelected(false);
+            }
+        }
+    }
+
+    @Override
+    public void onPageScrollStateChanged(int state) {
+        if (state == ViewPager.SCROLL_STATE_IDLE) {
+            if (currentItem == viewPager.getAdapter().getCount() - 1) {
+                viewPager.setCurrentItem(1, false);
+            } else if (currentItem == 0) {
+                viewPager.setCurrentItem(viewPager.getAdapter().getCount() - 2, false);
+            }
+        }
     }
 
     /**
@@ -355,7 +367,7 @@ public class AutoViewPager extends FrameLayout {
                 @Override
                 public void onClick(View v) {
                     if (AutoViewPager.this.listener != null)
-                        AutoViewPager.this.listener.onItemClick(v, truePosiiton);
+                        AutoViewPager.this.listener.onPagerItemClick(v, truePosiiton);
                 }
             });
             container.addView(imageView);
@@ -374,7 +386,7 @@ public class AutoViewPager extends FrameLayout {
     }
 
     public interface OnItemClickListener {
-        void onItemClick(View view, int position);
+        void onPagerItemClick(View view, int position);
     }
 
 }
